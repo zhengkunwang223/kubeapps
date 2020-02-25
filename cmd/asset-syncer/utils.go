@@ -77,13 +77,13 @@ func init() {
 type assetManager interface {
 	Delete(repo models.Repo) error
 	Sync(repo models.Repo, charts []models.Chart) error
-	RepoAlreadyProcessed(repoName, checksum string) bool
+	RepoAlreadyProcessed(repo models.Repo, checksum string) bool
 	UpdateLastCheck(repoNamespace, repoName, checksum string, now time.Time) error
 	Init() error
 	Close() error
 	InvalidateCache() error
-	updateIcon(data []byte, contentType, ID string) error
-	filesExist(chartFilesID, digest string) bool
+	updateIcon(repo models.Repo, data []byte, contentType, ID string) error
+	filesExist(repo models.Repo, chartFilesID, digest string) bool
 	insertFiles(chartId string, files models.ChartFiles) error
 }
 
@@ -383,14 +383,14 @@ func (f *fileImporter) fetchAndImportIcon(c models.Chart, r *models.RepoInternal
 		contentType = "image/png"
 	}
 
-	return f.manager.updateIcon(b, contentType, c.ID)
+	return f.manager.updateIcon(models.Repo{Namespace: r.Namespace, Name: r.Name}, b, contentType, c.ID)
 }
 
 func (f *fileImporter) fetchAndImportFiles(chartId string, r *models.RepoInternal, cv models.ChartVersion) error {
 	chartFilesID := fmt.Sprintf("%s/%s-%s", r.Name, chartId, cv.Version)
 
 	// Check if we already have indexed files for this chart version and digest
-	if f.manager.filesExist(chartFilesID, cv.Digest) {
+	if f.manager.filesExist(models.Repo{Namespace: r.Namespace, Name: r.Name}, chartFilesID, cv.Digest) {
 		log.WithFields(log.Fields{"name": chartId, "version": cv.Version}).Debug("skipping existing files")
 		return nil
 	}
